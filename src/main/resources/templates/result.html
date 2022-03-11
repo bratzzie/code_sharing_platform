@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="https://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Code</title>
+</head>
+<body th:object="${code_obj}" th:method="GET">
+
+<h1><span id="load_date" th:field="*{date}" th:text="${code_obj.date}"></span></h1>
+<pre id="code_snippet" th:field="*{code}" th:text="${code_obj.code}"><h6></h6></pre>
+
+</body>
+</html>

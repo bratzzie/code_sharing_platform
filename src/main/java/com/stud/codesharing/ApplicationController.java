@@ -1,43 +1,47 @@
 package com.stud.codesharing;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @org.springframework.stereotype.Controller
 public class ApplicationController {
-    List<Code> list = new ArrayList<>();
+
+    @Autowired
+    private CodeSnippetRepository repository;
 
     @GetMapping("/api/code/{N}")
     @ResponseBody
-    public Map<String, String> getAsJson(@PathVariable int N){
+    public Map<String, String> getAsJson(@PathVariable Long N){
+        Optional<Code> currentSnippet = repository.findById(N);
+
         Map<String, String> responseMap = new HashMap<>();
-        if (N < list.size()) {
-            Code currentCodeSnippet = list.get(N);
-            if (currentCodeSnippet != null) {
-                responseMap.put("code", currentCodeSnippet.getCode());
-                responseMap.put("date", currentCodeSnippet.getDate());
-                return responseMap;
-            }
+
+        if (currentSnippet.isPresent()) {
+            responseMap.put("code", currentSnippet.get().getCode());
+            responseMap.put("date", currentSnippet.get().getDate());
+            return responseMap;
         }
+
         responseMap.put("code", "");
         responseMap.put("date", "");
         return responseMap;
     }
 
     @GetMapping(value = "/code/{N}")
-    public String getAsHtml(@PathVariable int N, Model model) {
-        if (N < list.size()) {
-            Code currentCodeSnippet = list.get(N);
-            if (currentCodeSnippet != null) {
-                model.addAttribute("code_obj", currentCodeSnippet);
-                return "result";
-            }
+    public String getAsHtml(@PathVariable Long N, Model model) {
+        Optional<Code> currentSnippet = repository.findById(N);
+
+        if (currentSnippet.isPresent()) {
+            model.addAttribute("code_obj", currentSnippet.get());
+            return "result";
         }
 
-        Code nullCode = new Code("", "");
+        Code nullCode = new Code("", "", 99999L);
         model.addAttribute("code_obj", nullCode);
         return "result";
     }
@@ -66,20 +70,18 @@ public class ApplicationController {
         code.setNotFormattedDate();
         code.setDate();
 
-        list.add(code);
+        Code savedCode = repository.save(code);
         Map<String, String> resultToReturn = new HashMap<>();
-        resultToReturn.put("id", String.valueOf(list.indexOf(code)));
+        resultToReturn.put("id", String.valueOf(savedCode.getId()));
         return resultToReturn;
     }
 
     private List<Code> getLatestSnippets() {
-        List<Code> currentList = new ArrayList<>(list);
+        Comparator<Code> comparator = Comparator.comparing(Code::getNotFormattedDate).reversed();
 
-        Comparator<Code> comparator = Comparator.comparing(Code::getNotFormattedDate);
-        currentList.sort(comparator);
-        Collections.reverse(currentList);
-
-        return currentList.stream().limit(10).collect(Collectors.toList());
+        return StreamSupport.stream(repository.findAll().spliterator(), false)
+                .sorted(comparator)
+                .limit(10).collect(Collectors.toList());
     }
 
 }

@@ -4,5 +4,5 @@ import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface CodeSnippetRepository extends CrudRepository<Code, Long> {
+public interface CodeSnippetRepository extends CrudRepository<Code, String> {
 }

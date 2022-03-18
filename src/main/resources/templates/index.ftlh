@@ -3,9 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <title>Create</title>
+
+    <link rel="stylesheet"
+          target="_blank" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.2.1/build/styles/default.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.2.1/build/highlight.min.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
 </head>
 <body>
     <form method="get">
+        <label for="time_restriction"></label><input id="time_restriction" type="text"/>
+        <label for="views_restriction"></label><input id="views_restriction" type="text"/>
         <label>
                 <textarea id="code_snippet" rows="5" cols="30"></textarea>
         </label>

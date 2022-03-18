@@ -14,36 +14,105 @@ public class ApplicationController {
     @Autowired
     private CodeSnippetRepository repository;
 
-    @GetMapping("/api/code/{N}")
-    @ResponseBody
-    public Map<String, String> getAsJson(@PathVariable Long N){
-        Optional<Code> currentSnippet = repository.findById(N);
+    @Autowired
+    private CodeService service;
 
-        Map<String, String> responseMap = new HashMap<>();
+    @GetMapping("/api/code/{UUID}")
+    @ResponseBody
+    public Code getAsJson(@PathVariable String UUID){
+        Optional<Code> currentSnippet = repository.findById(UUID);
 
         if (currentSnippet.isPresent()) {
-            responseMap.put("code", currentSnippet.get().getCode());
-            responseMap.put("date", currentSnippet.get().getDate());
-            return responseMap;
-        }
+            if (!currentSnippet.get().getTimeRestricted() && !currentSnippet.get().getViewsRestricted()) {
+                return currentSnippet.get();
+            }
+            else if (currentSnippet.get().getTimeRestricted() && currentSnippet.get().getViewsRestricted()) {
+                Code codeSnippet = service.deleteCodeByIdAndViewsRestrictedAndViewsIsLessThanEqualAndTimeRestrictedAndTimeLessThanEqual(currentSnippet.get().getId());
+                if (codeSnippet != null)
+                    throw new CodeSnippetIllegalAccessException();
 
-        responseMap.put("code", "");
-        responseMap.put("date", "");
-        return responseMap;
+
+                currentSnippet.get().setViews(currentSnippet.get().getViews() - 1);
+                currentSnippet.get().setViewsRestricted(true);
+                repository.save(currentSnippet.get());
+
+                return currentSnippet.get();
+
+            } else if (currentSnippet.get().getTimeRestricted()) {
+                Code codeSnippet = service.deleteCodeByIdAndTimeRestrictedAndTimeIsLessThanEqual(currentSnippet.get().getId());
+                if (codeSnippet != null)
+                    throw new CodeSnippetIllegalAccessException();
+
+                return currentSnippet.get();
+            } else if (currentSnippet.get().getViewsRestricted()) {
+                Code codeSnippet = service.deleteCodeByIdAndViewsRestrictedAndViewsIsLessThanEqual(currentSnippet.get().getId());
+                if (codeSnippet != null)
+                    throw new CodeSnippetIllegalAccessException();
+
+                currentSnippet.get().setViews(currentSnippet.get().getViews() - 1);
+                currentSnippet.get().setViewsRestricted(true);
+                repository.save(currentSnippet.get());
+
+                return currentSnippet.get();
+            }
+        }
+        throw new CodeSnippetIllegalAccessException();
     }
 
-    @GetMapping(value = "/code/{N}")
-    public String getAsHtml(@PathVariable Long N, Model model) {
-        Optional<Code> currentSnippet = repository.findById(N);
+    @GetMapping(value = "/code/{UUID}")
+    public String getAsHtml(@PathVariable String UUID, Model model) {
+        Optional<Code> currentSnippet = repository.findById(UUID);
 
         if (currentSnippet.isPresent()) {
-            model.addAttribute("code_obj", currentSnippet.get());
-            return "result";
+            if (!currentSnippet.get().getTimeRestricted() && !currentSnippet.get().getViewsRestricted()) {
+                model.addAttribute("code_obj", currentSnippet.get());
+                return "result";
+            }
+            else if (currentSnippet.get().getTimeRestricted() && currentSnippet.get().getViewsRestricted()) {
+                Code codeSnippet = service.deleteCodeByIdAndViewsRestrictedAndViewsIsLessThanEqualAndTimeRestrictedAndTimeLessThanEqual(currentSnippet.get().getId());
+                if (codeSnippet != null)
+                    throw new CodeSnippetIllegalAccessException();
+
+
+                currentSnippet.get().setViews(currentSnippet.get().getViews() - 1);
+                currentSnippet.get().setViewsRestricted(true);
+                repository.save(currentSnippet.get());
+
+                model.addAttribute("code_obj", currentSnippet.get());
+                return "result";
+
+            } else if (currentSnippet.get().getTimeRestricted()) {
+                Code codeSnippet = service.deleteCodeByIdAndTimeRestrictedAndTimeIsLessThanEqual(currentSnippet.get().getId());
+                if (codeSnippet != null)
+                    throw new CodeSnippetIllegalAccessException();
+
+
+                model.addAttribute("code_obj", currentSnippet.get());
+                return "result";
+            } else if (currentSnippet.get().getViewsRestricted()) {
+                Code codeSnippet = service.deleteCodeByIdAndViewsRestrictedAndViewsIsLessThanEqual(currentSnippet.get().getId());
+                if (codeSnippet != null)
+                    throw new CodeSnippetIllegalAccessException();
+
+
+                Code copy = new Code();
+                copy.setCode(currentSnippet.get().getCode());
+                copy.setDate(currentSnippet.get().getDate());
+                copy.setViews(currentSnippet.get().getViews() - 1);
+                copy.setViewsRestricted(true);
+                copy.setTime(currentSnippet.get().getTime());
+
+                model.addAttribute("code_obj", copy);
+
+                currentSnippet.get().setViews(currentSnippet.get().getViews() - 1);
+                currentSnippet.get().setViewsRestricted(true);
+                repository.save(currentSnippet.get());
+
+                return "result";
+            }
         }
 
-        Code nullCode = new Code("", "", 99999L);
-        model.addAttribute("code_obj", nullCode);
-        return "result";
+        throw new CodeSnippetIllegalAccessException();
     }
 
     @GetMapping("/code/new")
@@ -66,13 +135,22 @@ public class ApplicationController {
 
     @PostMapping("/api/code/new")
     @ResponseBody
-    public Map<String, String> postNewCode(@RequestBody Code code) {
-        code.setNotFormattedDate();
-        code.setDate();
+    public Map<String, String> postNewCode(@RequestBody CodeToSave code) {
+        Code currentCode = new Code();
+        currentCode.setCode(code.getCode());
+        currentCode.setViews(code.getViews());
+        currentCode.setId();
+        currentCode.setNotFormattedDate();
+        currentCode.setDate();
+        currentCode.setTime(code.getTime());
 
-        Code savedCode = repository.save(code);
+        currentCode.setDateToDeleteSnippet();
+        repository.save(currentCode);
+        System.out.println("from post");
+        System.out.println(currentCode.getViewsRestricted());
+        System.out.println(currentCode.getId());
         Map<String, String> resultToReturn = new HashMap<>();
-        resultToReturn.put("id", String.valueOf(savedCode.getId()));
+        resultToReturn.put("id", currentCode.getId());
         return resultToReturn;
     }
 
@@ -81,6 +159,7 @@ public class ApplicationController {
 
         return StreamSupport.stream(repository.findAll().spliterator(), false)
                 .sorted(comparator)
+                .filter(n -> !n.getViewsRestricted() && !n.getTimeRestricted())
                 .limit(10).collect(Collectors.toList());
     }
 
